@@ -52,6 +52,9 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y patchelf fuse libfuse2
 
+      - name: Test shared JVM modules
+        run: ./gradlew --no-daemon :shared:jvmTest :sharedUi:jvmTest
+
       - name: Build desktop distribution
         run: ./gradlew --no-daemon :desktop:packageReleaseAppImage
 
