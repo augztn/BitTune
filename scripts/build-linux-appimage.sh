@@ -21,9 +21,9 @@ if [[ "$JAVA_MAJOR" != "17" ]]; then
 fi
 
 chmod +x ./gradlew
-./gradlew --no-daemon :desktop:packageReleaseAppImage
+./gradlew --no-daemon :desktop:packageAppImage
 
-ARTIFACT_DIR="$ROOT/desktop/build/compose/binaries/main-release/appimage"
+ARTIFACT_DIR="$ROOT/desktop/build/compose/binaries/main/appimage"
 shopt -s nullglob
 artifacts=("$ARTIFACT_DIR"/*.AppImage)
 if (( ${#artifacts[@]} != 1 )); then
