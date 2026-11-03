@@ -4240,6 +4240,10 @@ fun BitChordDesktopApp() {
                                             type = if (entity.entityType == EntityType.ALBUM) BrowseType.ALBUM else BrowseType.PLAYLIST,
                                         ),
                                     )
+                                    // OTHER represents browse pages without a desktop destination
+                                    // (for example podcast shows). Do not try to play their browse
+                                    // IDs as track video IDs.
+                                    EntityType.OTHER -> Unit
                                 }
                             },
                             onHistoryRemove = DesktopSearchHistory::remove,
