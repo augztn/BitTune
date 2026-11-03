@@ -50,21 +50,36 @@ jobs:
       - name: Install AppImage tooling
         run: |
           sudo apt-get update
-          sudo apt-get install -y patchelf fuse libfuse2
+          sudo apt-get install -y patchelf libfuse2
 
       - name: Test shared JVM modules
         run: ./gradlew --no-daemon :shared:jvmTest :sharedUi:jvmTest
 
       # The default package task deliberately skips ProGuard. The current
-      # shared dependency graph uses reflection and compileOnly Android/JVM
-      # integrations that ProGuard cannot safely resolve for this desktop host.
+      # shared dependency graph uses reflection and optional integrations
+      # that ProGuard cannot safely resolve for this desktop host.
       - name: Build desktop distribution
         run: ./gradlew --no-daemon :desktop:packageAppImage
+
+      - name: Verify AppImage output
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          ARTIFACT_DIR="desktop/build/compose/binaries/main/app"
+          mapfile -t artifacts < <(find "$ARTIFACT_DIR" -maxdepth 1 -type f -name '*.AppImage' -print)
+          if [[ "${#artifacts[@]}" -ne 1 ]]; then
+            echo "Expected exactly one AppImage in $ARTIFACT_DIR; found ${#artifacts[@]}." >&2
+            find desktop/build/compose/binaries -maxdepth 5 -type f -print || true
+            exit 1
+          fi
+          chmod +x "${artifacts[0]}"
+          file "${artifacts[0]}"
+          sha256sum "${artifacts[0]}"
 
       - name: Upload AppImage
         uses: actions/upload-artifact@v4
         with:
           name: BitWave-linux-x86_64-AppImage
-          path: desktop/build/compose/binaries/main/appimage/*.AppImage
+          path: desktop/build/compose/binaries/main/app/*.AppImage
           if-no-files-found: error
           retention-days: 14
