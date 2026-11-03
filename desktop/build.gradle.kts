@@ -17,6 +17,10 @@ dependencies {
     implementation(compose.material3)
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-swing:1.10.2")
 
+    // StreamResolver is compiled in :shared against this library as compileOnly.
+    // Desktop must provide it at runtime for the NewPipe fallback path.
+    implementation("com.github.TeamNewPipe:NewPipeExtractor:v0.26.3")
+
     // The shared analysis engine uses ONNX at runtime on the JVM.
     runtimeOnly("com.microsoft.onnxruntime:onnxruntime:1.20.0")
 }
