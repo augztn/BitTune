@@ -1,0 +1,62 @@
+name: Linux AppImage
+
+on:
+  push:
+    branches: [build/linux-appimage]
+    paths:
+      - 'desktop/**'
+      - 'shared/**'
+      - 'sharedUi/**'
+      - 'build.gradle.kts'
+      - 'settings.gradle.kts'
+      - 'gradle/**'
+      - 'gradlew'
+      - '.github/workflows/linux-appimage.yml'
+  pull_request:
+    paths:
+      - 'desktop/**'
+      - 'shared/**'
+      - 'sharedUi/**'
+      - 'build.gradle.kts'
+      - 'settings.gradle.kts'
+      - 'gradle/**'
+      - 'gradlew'
+      - '.github/workflows/linux-appimage.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: linux-appimage-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  appimage:
+    name: Build Linux x86_64 AppImage
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: gradle
+
+      - name: Install AppImage tooling
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y patchelf fuse libfuse2
+
+      - name: Build desktop distribution
+        run: ./gradlew --no-daemon :desktop:packageReleaseAppImage
+
+      - name: Upload AppImage
+        uses: actions/upload-artifact@v4
+        with:
+          name: BitWave-linux-x86_64-AppImage
+          path: desktop/build/compose/binaries/main-release/appimage/*.AppImage
+          if-no-files-found: error
+          retention-days: 14
