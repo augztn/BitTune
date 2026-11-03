@@ -4,7 +4,8 @@ on:
   push:
     branches: [build/linux-appimage]
     paths:
-      - 'desktop/**'\n      - 'scripts/build-linux-appimage.sh'\n      - 'scripts/build-linux-appimage.sh'
+      - 'desktop/**'
+      - 'scripts/build-linux-appimage.sh'
       - 'shared/**'
       - 'sharedUi/**'
       - 'build.gradle.kts'
@@ -15,6 +16,7 @@ on:
   pull_request:
     paths:
       - 'desktop/**'
+      - 'scripts/build-linux-appimage.sh'
       - 'shared/**'
       - 'sharedUi/**'
       - 'build.gradle.kts'
