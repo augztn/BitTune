@@ -23,14 +23,17 @@ fi
 chmod +x ./gradlew
 ./gradlew --no-daemon :desktop:packageAppImage
 
-ARTIFACT_DIR="$ROOT/desktop/build/compose/binaries/main/appimage"
+# Compose Desktop's packageAppImage task writes to the "app" directory.
+ARTIFACT_DIR="$ROOT/desktop/build/compose/binaries/main/app"
 shopt -s nullglob
 artifacts=("$ARTIFACT_DIR"/*.AppImage)
 if (( ${#artifacts[@]} != 1 )); then
   echo "Expected one AppImage in $ARTIFACT_DIR; found ${#artifacts[@]}." >&2
+  find "$ROOT/desktop/build/compose/binaries" -maxdepth 5 -type f -print >&2 || true
   exit 1
 fi
 
 chmod +x "${artifacts[0]}"
+file "${artifacts[0]}"
 sha256sum "${artifacts[0]}"
 printf 'AppImage created: %s\n' "${artifacts[0]}"
