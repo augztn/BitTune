@@ -58,7 +58,7 @@ jobs:
       # Build the Compose application image, then wrap it as a real AppImage.
       # Use the non-ProGuard task until the release shrinker rules are repaired.
       - name: Build and verify Linux AppImage
-        run: ./scripts/build-linux-appimage.sh
+        run: bash ./scripts/build-linux-appimage.sh
 
       - name: Upload AppImage
         uses: actions/upload-artifact@v4
