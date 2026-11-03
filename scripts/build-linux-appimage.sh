@@ -4,8 +4,23 @@ set -Eeuo pipefail
 ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 
+readonly APP_NAME="BitWave"
+readonly APP_VERSION="1.0.0"
+readonly COMPOSE_APP_DIR="$ROOT/desktop/build/compose/binaries/main/app/$APP_NAME"
+readonly APPDIR="$ROOT/build/appimage/$APP_NAME.AppDir"
+readonly TOOLS_DIR="$ROOT/build/tools"
+readonly APPIMAGETOOL="$TOOLS_DIR/appimagetool-x86_64.AppImage"
+readonly OUTPUT_DIR="$ROOT/dist"
+readonly OUTPUT="$OUTPUT_DIR/${APP_NAME}-${APP_VERSION}-x86_64.AppImage"
+readonly APPIMAGETOOL_URL="https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage"
+
 if [[ "$(uname -s)" != "Linux" ]]; then
   echo "This build script must run on Linux." >&2
+  exit 2
+fi
+
+if [[ "$(uname -m)" != "x86_64" ]]; then
+  echo "This build currently supports Linux x86_64 only (found $(uname -m))." >&2
   exit 2
 fi
 
@@ -20,20 +35,85 @@ if [[ "$JAVA_MAJOR" != "17" ]]; then
   exit 2
 fi
 
+for tool in curl file; do
+  if ! command -v "$tool" >/dev/null 2>&1; then
+    echo "Required tool '$tool' is missing." >&2
+    exit 2
+  fi
+done
+
 chmod +x ./gradlew
 ./gradlew --no-daemon :desktop:packageAppImage
 
-# Compose Desktop's packageAppImage task writes to the "app" directory.
-ARTIFACT_DIR="$ROOT/desktop/build/compose/binaries/main/app"
-shopt -s nullglob
-artifacts=("$ARTIFACT_DIR"/*.AppImage)
-if (( ${#artifacts[@]} != 1 )); then
-  echo "Expected one AppImage in $ARTIFACT_DIR; found ${#artifacts[@]}." >&2
-  find "$ROOT/desktop/build/compose/binaries" -maxdepth 5 -type f -print >&2 || true
+if [[ ! -x "$COMPOSE_APP_DIR/bin/$APP_NAME" ]]; then
+  echo "Compose Desktop did not create the expected launcher: $COMPOSE_APP_DIR/bin/$APP_NAME" >&2
+  find "$ROOT/desktop/build/compose/binaries" -maxdepth 6 -type f -print >&2 || true
   exit 1
 fi
 
-chmod +x "${artifacts[0]}"
-file "${artifacts[0]}"
-sha256sum "${artifacts[0]}"
-printf 'AppImage created: %s\n' "${artifacts[0]}"
+if [[ ! -f "$COMPOSE_APP_DIR/lib/$APP_NAME.png" ]]; then
+  echo "Expected application icon was not found: $COMPOSE_APP_DIR/lib/$APP_NAME.png" >&2
+  exit 1
+fi
+
+mkdir -p "$TOOLS_DIR" "$OUTPUT_DIR"
+if [[ ! -x "$APPIMAGETOOL" ]]; then
+  echo "Downloading official AppImageKit appimagetool..."
+  curl --fail --location --retry 3 --output "$APPIMAGETOOL" "$APPIMAGETOOL_URL"
+  chmod +x "$APPIMAGETOOL"
+fi
+
+rm -rf "$APPDIR"
+mkdir -p "$APPDIR/usr/lib" "$APPDIR/usr/bin"
+cp -a "$COMPOSE_APP_DIR" "$APPDIR/usr/lib/$APP_NAME"
+
+ln -s "../lib/$APP_NAME/bin/$APP_NAME" "$APPDIR/usr/bin/$APP_NAME"
+cp "$COMPOSE_APP_DIR/lib/$APP_NAME.png" "$APPDIR/$APP_NAME.png"
+ln -s "$APP_NAME.png" "$APPDIR/.DirIcon"
+
+cat > "$APPDIR/$APP_NAME.desktop" <<'DESKTOP'
+[Desktop Entry]
+Name=BitWave
+Comment=BitWave music player
+Exec=BitWave %U
+TryExec=BitWave
+Icon=BitWave
+Terminal=false
+Type=Application
+Categories=AudioVideo;Audio;Player;
+StartupNotify=true
+DESKTOP
+
+cat > "$APPDIR/AppRun" <<'APPRUN'
+#!/bin/sh
+set -eu
+HERE="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
+exec "$HERE/usr/bin/BitWave" "$@"
+APPRUN
+chmod +x "$APPDIR/AppRun"
+
+rm -f "$OUTPUT"
+echo "Creating AppImage..."
+APPIMAGE_EXTRACT_AND_RUN=1 "$APPIMAGETOOL" "$APPDIR" "$OUTPUT"
+chmod +x "$OUTPUT"
+
+if ! file "$OUTPUT" | grep -q 'ELF 64-bit'; then
+  echo "Generated output is not a 64-bit Linux executable." >&2
+  file "$OUTPUT" >&2
+  exit 1
+fi
+
+VERIFY_DIR="$(mktemp -d)"
+cleanup() {
+  rm -rf "$VERIFY_DIR"
+}
+trap cleanup EXIT
+(
+  cd "$VERIFY_DIR"
+  "$OUTPUT" --appimage-extract >/dev/null
+  test -x squashfs-root/AppRun
+  test -x squashfs-root/usr/bin/$APP_NAME
+)
+
+sha256sum "$OUTPUT"
+printf 'AppImage created and archive-verified: %s\n' "$OUTPUT"
