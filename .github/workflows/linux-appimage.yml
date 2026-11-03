@@ -3,6 +3,7 @@ name: Linux Desktop AppImage
 on:
   push:
     branches: [build/linux-appimage]
+    tags: ["v*"]
     paths:
       - "desktopApp/**"
       - "desktopUi/**"
@@ -27,7 +28,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: linux-desktop-${{ github.workflow }}-${{ github.ref }}
@@ -79,10 +80,26 @@ jobs:
           test -x squashfs-root/AppRun
           rm -rf squashfs-root
 
-      - name: Upload Linux AppImage
+      - name: Generate SHA-256 checksum
+        run: |
+          cd dist
+          sha256sum BitChord-1.9-linux-x86_64.AppImage > SHA256SUMS
+
+      - name: Upload Linux AppImage (workflow artifact)
         uses: actions/upload-artifact@v4
         with:
           name: BitWave-linux-x86_64-AppImage
-          path: dist/BitChord-1.9-linux-x86_64.AppImage
+          path: |
+            dist/BitChord-1.9-linux-x86_64.AppImage
+            dist/SHA256SUMS
           if-no-files-found: error
           retention-days: 14
+
+      - name: Publish standalone AppImage to GitHub Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/BitChord-1.9-linux-x86_64.AppImage
+            dist/SHA256SUMS
+          generate_release_notes: true
