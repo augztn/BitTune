@@ -95,10 +95,45 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
+      # Keep a stable direct-download release for branch builds. The tag is
+      # intentionally moved to this branch's latest successful commit.
+      - name: Update rolling AppImage download tag
+        if: github.ref == 'refs/heads/build/linux-appimage'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const tag = 'linux-appimage-latest';
+            const ref = `tags/${tag}`;
+            try {
+              await github.rest.git.getRef({
+                ...context.repo,
+                ref
+              });
+              await github.rest.git.updateRef({
+                ...context.repo,
+                ref,
+                sha: context.sha,
+                force: true
+              });
+            } catch (error) {
+              if (error.status !== 404) throw error;
+              await github.rest.git.createRef({
+                ...context.repo,
+                ref: `refs/${ref}`,
+                sha: context.sha
+              });
+            }
+
       - name: Publish standalone AppImage to GitHub Release
-        if: startsWith(github.ref, 'refs/tags/')
+        if: github.ref == 'refs/heads/build/linux-appimage' || startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ github.ref == 'refs/heads/build/linux-appimage' && 'linux-appimage-latest' || github.ref_name }}
+          target_commitish: ${{ github.sha }}
+          name: ${{ github.ref == 'refs/heads/build/linux-appimage' && 'Latest Linux AppImage (build branch)' || github.ref_name }}
+          prerelease: ${{ github.ref == 'refs/heads/build/linux-appimage' }}
+          make_latest: false
+          overwrite_files: true
           files: |
             dist/BitChord-1.9-linux-x86_64.AppImage
             dist/SHA256SUMS
