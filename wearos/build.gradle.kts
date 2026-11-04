@@ -58,7 +58,7 @@ android {
         }
         create("prod") {
             dimension = "env"
-            resValue("string", "app_name", "BitChord")
+            resValue("string", "app_name", "BitTune")
         }
     }
 
