@@ -139,7 +139,7 @@ kotlin {
 // Named after the phone APKs (BitChord-v1.8.apk) but with their own prefix, so
 // the phone's updater — which only takes assets starting "BitChord-" — can never
 // pick a watch APK by mistake.
-base.archivesName.set("BitChordWear")
+base.archivesName.set("BitTuneWear")
 
 dependencies {
     implementation("androidx.wear.compose:compose-material3:1.6.2")
