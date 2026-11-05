@@ -52,7 +52,7 @@ if command -v strip >/dev/null 2>&1; then
     if file -b "$library" | grep -q '^ELF'; then
       strip --strip-debug "$library"
     fi
-  done < <(find "$APPDIR/usr" -type f \\( -name '*.so' -o -name '*.so.*' \\) -print0)
+  done < <(find "$APPDIR/usr" -type f \( -name '*.so' -o -name '*.so.*' \) -print0)
 fi
 
 mkdir -p "$(dirname "$OUT")"
