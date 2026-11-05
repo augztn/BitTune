@@ -29,6 +29,8 @@ on:
 
 permissions:
   contents: write
+  id-token: write
+  attestations: write
 
 concurrency:
   group: linux-desktop-${{ github.workflow }}-${{ github.ref }}
@@ -84,6 +86,14 @@ jobs:
         run: |
           cd dist
           sha256sum BitTune-1.9-linux-x86_64.AppImage > SHA256SUMS
+
+      # Attach a Sigstore/GitHub build-provenance attestation to the exact binary.
+      # This makes the published executable independently verifiable; it does not
+      # override or bypass Chrome Safe Browsing verdicts.
+      - name: Attest Linux AppImage build provenance
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: dist/BitTune-1.9-linux-x86_64.AppImage
 
       - name: Upload Linux AppImage (workflow artifact)
         uses: actions/upload-artifact@v4
