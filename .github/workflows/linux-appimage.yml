@@ -29,6 +29,8 @@ on:
 
 permissions:
   contents: write
+  id-token: write
+  attestations: write
 
 concurrency:
   group: linux-desktop-${{ github.workflow }}-${{ github.ref }}
@@ -58,7 +60,7 @@ jobs:
         run: ./gradlew --no-daemon :shared:jvmTest :desktopUi:jvmTest :desktopApp:test
 
       - name: Build native desktop application image
-        run: ./gradlew --no-daemon :desktopApp:createDistributable
+        run: ./gradlew --no-daemon -Pbitchord.target=linux -Pbitchord.version=1.9 :desktopApp:createDistributable
 
       - name: Download AppImage tooling
         run: |
@@ -72,25 +74,33 @@ jobs:
           mkdir -p dist
           desktopApp/packaging/appimage.sh \
             desktopApp/build/compose/binaries/main/app/BitChord \
-            dist/BitChord-1.9-linux-x86_64.AppImage \
+            dist/BitTune-1.9-linux-x86_64.AppImage \
             "$PWD/appimagetool.AppImage"
-          test -s dist/BitChord-1.9-linux-x86_64.AppImage
-          file dist/BitChord-1.9-linux-x86_64.AppImage | grep -q "ELF"
-          APPIMAGE_EXTRACT_AND_RUN=1 dist/BitChord-1.9-linux-x86_64.AppImage --appimage-extract >/dev/null
+          test -s dist/BitTune-1.9-linux-x86_64.AppImage
+          file dist/BitTune-1.9-linux-x86_64.AppImage | grep -q "ELF"
+          APPIMAGE_EXTRACT_AND_RUN=1 dist/BitTune-1.9-linux-x86_64.AppImage --appimage-extract >/dev/null
           test -x squashfs-root/AppRun
           rm -rf squashfs-root
 
       - name: Generate SHA-256 checksum
         run: |
           cd dist
-          sha256sum BitChord-1.9-linux-x86_64.AppImage > SHA256SUMS
+          sha256sum BitTune-1.9-linux-x86_64.AppImage > SHA256SUMS
+
+      # Attach a Sigstore/GitHub build-provenance attestation to the exact binary.
+      # This makes the published executable independently verifiable; it does not
+      # override or bypass Chrome Safe Browsing verdicts.
+      - name: Attest Linux AppImage build provenance
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: dist/BitTune-1.9-linux-x86_64.AppImage
 
       - name: Upload Linux AppImage (workflow artifact)
         uses: actions/upload-artifact@v4
         with:
-          name: BitWave-linux-x86_64-AppImage
+          name: BitTune-linux-x86_64-AppImage
           path: |
-            dist/BitChord-1.9-linux-x86_64.AppImage
+            dist/BitTune-1.9-linux-x86_64.AppImage
             dist/SHA256SUMS
           if-no-files-found: error
           retention-days: 14
@@ -135,6 +145,6 @@ jobs:
           make_latest: false
           overwrite_files: true
           files: |
-            dist/BitChord-1.9-linux-x86_64.AppImage
+            dist/BitTune-1.9-linux-x86_64.AppImage
             dist/SHA256SUMS
           generate_release_notes: true

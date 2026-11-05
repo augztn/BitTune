@@ -15,7 +15,7 @@ TOOL=${3:-appimagetool}
 ROOT=$(cd "$(dirname "$0")/../.." && pwd)
 STAGE=$(mktemp -d)
 trap 'rm -rf "$STAGE"' EXIT
-APPDIR="$STAGE/BitChord.AppDir"
+APPDIR="$STAGE/BitTune.AppDir"
 
 mkdir -p "$APPDIR/usr"
 cp -a "$APP_DIR_SRC/." "$APPDIR/usr/"
@@ -28,26 +28,42 @@ exec "$HERE/usr/bin/BitChord" "$@"
 APPRUN
 chmod +x "$APPDIR/AppRun"
 
-cat > "$APPDIR/bitchord.desktop" <<'DESKTOP'
+cat > "$APPDIR/bittune.desktop" <<'DESKTOP'
 [Desktop Entry]
 Type=Application
-Name=BitChord
+Name=BitTune
 GenericName=Music Player
 Comment=Aesthetic YouTube Music client
 Exec=BitChord
-Icon=bitchord
+Icon=bittune
 Categories=AudioVideo;Audio;Player;
 Terminal=false
 StartupWMClass=com-music-bitchord-desktop-MainKt
 DESKTOP
 
 # appimagetool reads the icon by the desktop entry; the desktop reads .DirIcon.
-cp "$ROOT/desktopApp/packaging/icons/AppIcon.png" "$APPDIR/bitchord.png"
+cp "$ROOT/desktopApp/packaging/icons/AppIcon.png" "$APPDIR/bittune.png"
 cp "$ROOT/desktopApp/packaging/icons/AppIcon.png" "$APPDIR/.DirIcon"
+
+# Remove non-runtime ELF debug sections from bundled native libraries. Keep dynamic
+# symbol tables intact so JNI, JavaFX, FFmpeg and SQLite native loading remain valid.
+if command -v strip >/dev/null 2>&1; then
+  while IFS= read -r -d '' library; do
+    if file -b "$library" | grep -q '^ELF'; then
+      strip --strip-debug "$library"
+    fi
+  done < <(find "$APPDIR/usr" -type f \( -name '*.so' -o -name '*.so.*' \) -print0)
+fi
 
 mkdir -p "$(dirname "$OUT")"
 # APPIMAGE_EXTRACT_AND_RUN rather than the flag of the same name: it is read by the AppImage
 # runtime, so it covers a CI runner with no FUSE, and a natively built appimagetool — which has
 # no such flag and would refuse to start — simply ignores it.
-ARCH=x86_64 APPIMAGE_EXTRACT_AND_RUN=1 "$TOOL" "$APPDIR" "$OUT"
+# Use the static appimagetool's supported Zstandard compressor at a high level.
+# A 1 MiB SquashFS block improves compression for the large JVM/native payload.
+ARCH=x86_64 APPIMAGE_EXTRACT_AND_RUN=1 "$TOOL" \
+  --comp zstd \
+  --mksquashfs-opt -b --mksquashfs-opt 1M \
+  --mksquashfs-opt -Xcompression-level --mksquashfs-opt 22 \
+  "$APPDIR" "$OUT"
 echo "appimage: $OUT"
