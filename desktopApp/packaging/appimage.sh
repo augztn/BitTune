@@ -15,7 +15,7 @@ TOOL=${3:-appimagetool}
 ROOT=$(cd "$(dirname "$0")/../.." && pwd)
 STAGE=$(mktemp -d)
 trap 'rm -rf "$STAGE"' EXIT
-APPDIR="$STAGE/BitChord.AppDir"
+APPDIR="$STAGE/BitTune.AppDir"
 
 mkdir -p "$APPDIR/usr"
 cp -a "$APP_DIR_SRC/." "$APPDIR/usr/"
@@ -28,21 +28,21 @@ exec "$HERE/usr/bin/BitChord" "$@"
 APPRUN
 chmod +x "$APPDIR/AppRun"
 
-cat > "$APPDIR/bitchord.desktop" <<'DESKTOP'
+cat > "$APPDIR/bittune.desktop" <<'DESKTOP'
 [Desktop Entry]
 Type=Application
-Name=BitChord
+Name=BitTune
 GenericName=Music Player
 Comment=Aesthetic YouTube Music client
 Exec=BitChord
-Icon=bitchord
+Icon=bittune
 Categories=AudioVideo;Audio;Player;
 Terminal=false
 StartupWMClass=com-music-bitchord-desktop-MainKt
 DESKTOP
 
 # appimagetool reads the icon by the desktop entry; the desktop reads .DirIcon.
-cp "$ROOT/desktopApp/packaging/icons/AppIcon.png" "$APPDIR/bitchord.png"
+cp "$ROOT/desktopApp/packaging/icons/AppIcon.png" "$APPDIR/bittune.png"
 cp "$ROOT/desktopApp/packaging/icons/AppIcon.png" "$APPDIR/.DirIcon"
 
 mkdir -p "$(dirname "$OUT")"
