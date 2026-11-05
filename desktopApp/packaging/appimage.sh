@@ -45,6 +45,16 @@ DESKTOP
 cp "$ROOT/desktopApp/packaging/icons/AppIcon.png" "$APPDIR/bittune.png"
 cp "$ROOT/desktopApp/packaging/icons/AppIcon.png" "$APPDIR/.DirIcon"
 
+# Remove non-runtime ELF debug sections from bundled native libraries. Keep dynamic
+# symbol tables intact so JNI, JavaFX, FFmpeg and SQLite native loading remain valid.
+if command -v strip >/dev/null 2>&1; then
+  while IFS= read -r -d '' library; do
+    if file -b "$library" | grep -q '^ELF'; then
+      strip --strip-debug "$library"
+    fi
+  done < <(find "$APPDIR/usr" -type f \\( -name '*.so' -o -name '*.so.*' \\) -print0)
+fi
+
 mkdir -p "$(dirname "$OUT")"
 # APPIMAGE_EXTRACT_AND_RUN rather than the flag of the same name: it is read by the AppImage
 # runtime, so it covers a CI runner with no FUSE, and a natively built appimagetool — which has
@@ -54,6 +64,6 @@ mkdir -p "$(dirname "$OUT")"
 ARCH=x86_64 APPIMAGE_EXTRACT_AND_RUN=1 "$TOOL" \
   --comp zstd \
   --mksquashfs-opt -b --mksquashfs-opt 1M \
-  --mksquashfs-opt -Xcompression-level --mksquashfs-opt 19 \
+  --mksquashfs-opt -Xcompression-level --mksquashfs-opt 22 \
   "$APPDIR" "$OUT"
 echo "appimage: $OUT"
