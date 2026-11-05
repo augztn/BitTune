@@ -49,5 +49,11 @@ mkdir -p "$(dirname "$OUT")"
 # APPIMAGE_EXTRACT_AND_RUN rather than the flag of the same name: it is read by the AppImage
 # runtime, so it covers a CI runner with no FUSE, and a natively built appimagetool — which has
 # no such flag and would refuse to start — simply ignores it.
-ARCH=x86_64 APPIMAGE_EXTRACT_AND_RUN=1 "$TOOL" "$APPDIR" "$OUT"
+# Use the static appimagetool's supported Zstandard compressor at a high level.
+# A 1 MiB SquashFS block improves compression for the large JVM/native payload.
+ARCH=x86_64 APPIMAGE_EXTRACT_AND_RUN=1 "$TOOL" \
+  --comp zstd \
+  --mksquashfs-opt -b --mksquashfs-opt 1M \
+  --mksquashfs-opt -Xcompression-level --mksquashfs-opt 19 \
+  "$APPDIR" "$OUT"
 echo "appimage: $OUT"
